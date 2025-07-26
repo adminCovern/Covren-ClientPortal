@@ -1,0 +1,47 @@
+# Sovereign Command Center Render Deployment Configuration
+# Covren Firm LLC - Production Grade Deployment
+
+services:
+  - type: web
+    name: covren-client-portal
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://flyflafbdqhdhgxngahz.supabase.co; frame-src 'none'; object-src 'none';"
+      - path: /static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /favicon.ico
+        name: Cache-Control
+        value: public, max-age=86400
+    environmentVariables:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        value: https://flyflafbdqhdhgxngahz.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZseWZsYWZiZHFoZGhneG5nYWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMzMzAsImV4cCI6MjA2ODgwOTMzMH0.pRpNyNwr6AQRg3eHA5XDgxJwhGZXwlakVx7in9ciOms
+      - key: DOMAIN
+        value: portal.covrenfirm.com
+    healthCheckPath: /
+    autoDeploy: true
+    branch: main 

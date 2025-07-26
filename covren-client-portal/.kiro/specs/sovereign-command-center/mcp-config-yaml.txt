@@ -1,0 +1,113 @@
+# Sovereign Portal MCP Server Configuration
+# This configuration ensures optimal performance and security
+
+# Database Configuration
+db_host: localhost
+db_port: 5432
+db_name: covren
+db_user: covren_user
+db_password: "your_secure_database_password_here"
+db_pool_size: 20
+
+# Redis Configuration
+redis_host: localhost
+redis_port: 6379
+redis_password: "your_redis_password_here"
+redis_db: 0
+
+# LLM Configuration
+ollama_host: http://localhost:11434
+primary_model: mistral:7b-instruct-v0.3-q4_K_M
+document_model: phi3:14b-medium-4k-instruct-q4_0
+technical_model: deepseek-coder:6.7b-instruct-q4_0
+
+# Performance Targets
+target_response_ms: 100      # Standard response time target
+quantum_response_ms: 50      # Quantum-grade response time
+cache_ttl_seconds: 300       # Cache TTL
+max_concurrent_requests: 100 # Maximum concurrent requests
+
+# Security Configuration
+jwt_secret: "your_super_secure_jwt_secret_key_minimum_64_chars_long_with_special_chars!@#$%"
+encryption_key: "your_256_bit_encryption_key_for_quantum_resistant_encryption"
+session_timeout_minutes: 60
+max_login_attempts: 5
+lockout_duration_minutes: 15
+
+# System Resource Limits
+max_memory_gb: 64           # Maximum memory allocation
+cpu_threshold_percent: 80   # CPU usage alert threshold
+disk_usage_threshold: 90    # Disk usage alert threshold
+
+# Feature Flags
+predictive_analytics_enabled: true
+quantum_security_enabled: true
+neural_delight_patterns_enabled: true
+ai_enhancement_enabled: true
+auto_scaling_enabled: true
+debug_mode: false
+
+# Communication Settings
+email_enabled: true
+sms_enabled: true
+smtp_host: smtp.gmail.com
+smtp_port: 587
+smtp_user: notifications@covrenfirm.com
+smtp_password: "smtp_password_here"
+
+# Monitoring & Alerting
+metrics_retention_days: 30
+alert_email: admin@covrenfirm.com
+alert_thresholds:
+  error_rate: 0.01          # 1% error rate threshold
+  response_time_p95: 200    # 95th percentile response time
+  uptime_target: 0.9999     # 99.99% uptime target
+
+# Backup Configuration
+backup_enabled: true
+backup_schedule: "0 2 * * *"  # Daily at 2 AM
+backup_retention_days: 30
+backup_location: /opt/covren/backups
+
+# Advanced Settings
+query_timeout_seconds: 30
+connection_timeout_seconds: 10
+request_body_limit_mb: 50
+rate_limit_per_minute: 1000
+ip_whitelist: []            # Empty = allow all
+ip_blacklist: []
+
+# LLM Specific Settings
+llm_settings:
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 2048
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_delay_ms: 1000
+  
+# Predictive Analytics Settings
+prediction_settings:
+  min_pattern_count: 5      # Minimum patterns before prediction
+  pattern_history_limit: 100
+  prediction_confidence_threshold: 0.85
+  model_update_interval_hours: 24
+
+# Performance Optimization
+optimization_settings:
+  query_cache_size: 1000
+  query_cache_ttl_seconds: 600
+  connection_pool_size: 50
+  parallel_query_threshold: 4
+  index_suggestion_enabled: true
+
+# Disaster Recovery
+disaster_recovery:
+  enable_auto_failover: true
+  health_check_interval_seconds: 30
+  failover_threshold_minutes: 5
+  backup_regions:
+    - us-west-2
+    - us-east-1
+  recovery_time_objective_minutes: 15
+  recovery_point_objective_minutes: 5
