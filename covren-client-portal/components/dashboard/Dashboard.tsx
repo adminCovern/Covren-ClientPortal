@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import type { User, Project } from '../../types';
 import { projectsApi } from '../../services/api';
 import LoadingSpinner from '../common/LoadingSpinner';
+import ProjectCreator from './ProjectCreator';
 
 interface DashboardProps {
   user: User;
@@ -15,6 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedView, setSelectedView] = useState<'overview' | 'projects' | 'analytics'>('overview');
+  const [showProjectCreator, setShowProjectCreator] = useState(false);
 
   useEffect(() => {
     loadProjects();
@@ -35,6 +37,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProjectCreated = (project: Project) => {
+    setProjects(prev => [project, ...prev]);
+    setShowProjectCreator(false);
+  };
+
+  const handleCancelProjectCreation = () => {
+    setShowProjectCreator(false);
   };
 
   const getGreeting = () => {
@@ -190,6 +201,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-gray-400">No projects found. Create your first project to get started.</p>
+                  <button 
+                    onClick={() => setShowProjectCreator(true)}
+                    className="mt-4 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-md font-medium transition-colors"
+                  >
+                    Create Project
+                  </button>
                 </div>
               )}
             </div>
@@ -202,7 +219,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <div className="px-6 py-4 border-b border-gray-700">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-white">All Projects</h3>
-              <button className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+              <button 
+                onClick={() => setShowProjectCreator(true)}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
                 Create Project
               </button>
             </div>
@@ -249,7 +269,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
                 <h3 className="text-lg font-medium text-white mb-2">No projects yet</h3>
                 <p className="text-gray-400 mb-4">Create your first project to start managing your assets</p>
-                <button className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-md font-medium transition-colors">
+                <button 
+                  onClick={() => setShowProjectCreator(true)}
+                  className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-md font-medium transition-colors"
+                >
                   Create Project
                 </button>
               </div>
@@ -273,6 +296,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
               <h3 className="text-lg font-medium text-white mb-2">Analytics Coming Soon</h3>
               <p className="text-gray-400">Advanced analytics and reporting features will be available soon.</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Creator Modal */}
+      {showProjectCreator && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <ProjectCreator
+              onProjectCreated={handleProjectCreated}
+              onCancel={handleCancelProjectCreation}
+            />
           </div>
         </div>
       )}

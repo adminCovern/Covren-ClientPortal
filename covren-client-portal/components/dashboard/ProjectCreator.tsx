@@ -80,16 +80,16 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
   }, [formData, onProjectCreated]);
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Create New Project</h2>
-        <p className="text-sm text-gray-600 mt-1">Set up a new project for your team</p>
+    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+      <div className="px-6 py-4 border-b border-gray-700">
+        <h2 className="text-xl font-semibold text-white">Create New Project</h2>
+        <p className="text-sm text-gray-400 mt-1">Set up a new project for your team</p>
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {/* Project Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
             Project Name *
           </label>
           <input
@@ -97,20 +97,20 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
             id="name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-gray-700 text-white ${
+              errors.name ? 'border-red-500' : 'border-gray-600'
             }`}
             placeholder="Enter project name"
             disabled={loading}
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            <p className="mt-1 text-sm text-red-400">{errors.name}</p>
           )}
         </div>
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
             Description
           </label>
           <textarea
@@ -118,27 +118,27 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
             rows={3}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.description ? 'border-red-300' : 'border-gray-300'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-gray-700 text-white ${
+              errors.description ? 'border-red-500' : 'border-gray-600'
             }`}
             placeholder="Describe your project"
             disabled={loading}
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+            <p className="mt-1 text-sm text-red-400">{errors.description}</p>
           )}
         </div>
 
         {/* Priority */}
         <div>
-          <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="priority" className="block text-sm font-medium text-gray-300 mb-2">
             Priority
           </label>
           <select
             id="priority"
             value={formData.priority}
             onChange={(e) => handleInputChange('priority', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-gray-700 text-white"
             disabled={loading}
           >
             <option value="low">Low</option>
@@ -151,7 +151,7 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
         {/* Budget and Deadline */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="budget" className="block text-sm font-medium text-gray-300 mb-2">
               Budget (USD)
             </label>
             <input
@@ -161,19 +161,19 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
               onChange={(e) => handleInputChange('budget', e.target.value ? parseFloat(e.target.value) : undefined)}
               min="0"
               step="0.01"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.budget ? 'border-red-300' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-gray-700 text-white ${
+                errors.budget ? 'border-red-500' : 'border-gray-600'
               }`}
               placeholder="0.00"
               disabled={loading}
             />
             {errors.budget && (
-              <p className="mt-1 text-sm text-red-600">{errors.budget}</p>
+              <p className="mt-1 text-sm text-red-400">{errors.budget}</p>
             )}
           </div>
 
           <div>
-            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="deadline" className="block text-sm font-medium text-gray-300 mb-2">
               Deadline
             </label>
             <input
@@ -181,46 +181,39 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
               id="deadline"
               value={formData.deadline}
               onChange={(e) => handleInputChange('deadline', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.deadline ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-gray-700 text-white"
               disabled={loading}
             />
-            {errors.deadline && (
-              <p className="mt-1 text-sm text-red-600">{errors.deadline}</p>
-            )}
           </div>
         </div>
 
         {/* Tags */}
         <div>
-          <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Tags
           </label>
           <div className="space-y-2">
             <input
               type="text"
-              id="tags"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleTagInputKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Type tags and press Enter or comma"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-gray-700 text-white"
+              placeholder="Type a tag and press Enter"
               disabled={loading}
             />
-            
             {formData.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag, index) => (
+                {formData.tags.map((tag) => (
                   <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                    key={tag}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-600 text-white"
                   >
                     {tag}
                     <button
                       type="button"
                       onClick={() => removeTag(tag)}
-                      className="ml-1 text-blue-600 hover:text-blue-800"
+                      className="ml-1 hover:text-red-200"
                       disabled={loading}
                     >
                       ×
@@ -232,27 +225,27 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
           </div>
         </div>
 
-        {/* Submit Error */}
+        {/* Error Message */}
         {errors.submit && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{errors.submit}</p>
+          <div className="p-4 bg-red-800 border border-red-600 rounded-md">
+            <p className="text-red-100">{errors.submit}</p>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4">
+        {/* Action Buttons */}
+        <div className="flex justify-end space-x-3 pt-4">
           <button
             type="button"
             onClick={onCancel}
+            className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded-md transition-colors"
             disabled={loading}
-            className="px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Project'}
           </button>
