@@ -86,20 +86,25 @@ router.post('/auth/login', [
     req.session.userEmail = user.email;
     req.session.userRole = user.role;
 
-    res.json({
+    // Get user metadata for complete profile
+    const metadata = user.metadata || {};
+
+    return res.json({
       success: true,
       token,
       user: {
         id: user.user_id,
         email: user.email,
         role: user.role,
-        name: user.full_name || user.email
+        name: metadata.name || user.email
       }
     });
 
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Authentication failed' });
+    }
   }
 });
 
@@ -158,7 +163,7 @@ router.post('/auth/register', [
     req.session.userEmail = user.email;
     req.session.userRole = user.role;
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       token,
       user: {
@@ -171,7 +176,9 @@ router.post('/auth/register', [
 
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Registration failed' });
+    }
   }
 });
 
@@ -181,26 +188,44 @@ router.post('/auth/logout', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Logout failed' });
     }
-    res.json({ success: true, message: 'Logged out successfully' });
+    return res.json({ success: true, message: 'Logged out successfully' });
   });
 });
 
 // Get user profile
 router.get('/auth/profile', authenticateToken, async (req, res) => {
   try {
+    console.log('Profile request for user ID:', req.user.id);
+    
+    // Query the users table directly with the correct structure
     const result = await pool.query(
-      'SELECT u.id, u.email, u.role, up.full_name as name, u.created_at FROM users u LEFT JOIN user_profiles up ON u.id = up.id WHERE u.id = $1',
+      'SELECT id, email, role, metadata FROM users WHERE id = $1',
       [req.user.id]
     );
+
+    console.log('Profile query result:', result.rows);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    const metadata = user.metadata || {};
+    
+    return res.json({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: metadata.name || user.email,
+      company: metadata.company,
+      position: metadata.position
+    });
+
   } catch (error) {
     console.error('Profile error:', error);
-    res.status(500).json({ error: 'Failed to fetch profile' });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 
