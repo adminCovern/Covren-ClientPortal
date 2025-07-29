@@ -24,11 +24,26 @@ sudo -u postgres createdb sovereign_command_center 2>/dev/null || echo "Database
 
 # Apply the schema
 echo "Applying database schema..."
-if [ -f "/var/www/client-portal/database-schema-standalone.sql" ]; then
-    sudo -u postgres psql -d sovereign_command_center -f /var/www/client-portal/database-schema-standalone.sql
+SCHEMA_FILE="/var/www/client-portal/database-schema-standalone.sql"
+if [ ! -f "$SCHEMA_FILE" ]; then
+    SCHEMA_FILE="$(dirname "$0")/database-schema-standalone.sql"
+fi
+
+if [ -f "$SCHEMA_FILE" ]; then
+    sudo -u postgres psql -d sovereign_command_center -f "$SCHEMA_FILE"
     echo "Database schema applied successfully!"
+    
+    echo "Verifying Row-Level Security setup..."
+    sudo -u postgres psql -d sovereign_command_center -c "
+        SELECT schemaname, tablename, rowsecurity 
+        FROM pg_tables 
+        WHERE schemaname = 'public' 
+        AND rowsecurity = true;
+    "
+    
+    echo "RLS verification complete!"
 else
-    echo "Schema file not found at /var/www/client-portal/database-schema-standalone.sql"
+    echo "Schema file not found at $SCHEMA_FILE"
     echo "Please upload the schema file to the server first."
     exit 1
 fi
