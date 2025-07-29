@@ -3,27 +3,26 @@
 
 const React = require('react');
 const { render, fireEvent, waitFor, screen } = require('@testing-library/react');
-const { createClient } = require('@supabase/supabase-js');
-
-// Mock Supabase
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({
-    auth: {
-      getSession: jest.fn(() => Promise.resolve({ data: { session: null } })),
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      onAuthStateChange: jest.fn((cb) => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      insert: jest.fn(() => Promise.resolve({ error: null })),
-      delete: jest.fn(() => Promise.resolve({ error: null })),
-    })),
-    channel: jest.fn(() => ({
-      on: jest.fn(() => ({ subscribe: jest.fn() })),
-    })),
-  })),
+jest.mock('../services/api.ts', () => ({
+  authApi: {
+    getSession: jest.fn(() => Promise.resolve({ data: null, error: null, success: false })),
+    signIn: jest.fn(),
+    signUp: jest.fn(),
+    signOut: jest.fn(),
+  },
+  projectsApi: {
+    getUserProjects: jest.fn(() => Promise.resolve({ data: [], error: null, success: true })),
+    createProject: jest.fn(() => Promise.resolve({ data: {}, error: null, success: true })),
+  },
+  documentsApi: {
+    uploadDocument: jest.fn(() => Promise.resolve({ data: {}, error: null, success: true })),
+  },
+  messagesApi: {
+    getMessages: jest.fn(() => Promise.resolve({ data: [], error: null, success: true })),
+  },
+  notificationsApi: {
+    getNotifications: jest.fn(() => Promise.resolve({ data: [], error: null, success: true })),
+  }
 }));
 
 // Mock the main App component
@@ -423,20 +422,26 @@ describe('Sovereign Command Center', () => {
 
 // Integration tests for API calls
 describe('API Integration', () => {
-  test('Supabase client is properly initialized', () => {
-    expect(createClient).toHaveBeenCalledWith(
-      'https://flyflafbdqhdhgxngahz.supabase.co',
-      expect.any(String)
-    );
+  test('API services are properly initialized', () => {
+    const { authApi, projectsApi, documentsApi, messagesApi, notificationsApi } = require('../services/api.ts');
+    
+    expect(authApi.getSession).toBeDefined();
+    expect(authApi.signIn).toBeDefined();
+    expect(authApi.signUp).toBeDefined();
+    expect(authApi.signOut).toBeDefined();
+    expect(projectsApi.getUserProjects).toBeDefined();
+    expect(documentsApi.uploadDocument).toBeDefined();
+    expect(messagesApi.getMessages).toBeDefined();
+    expect(notificationsApi.getNotifications).toBeDefined();
   });
 
   test('authentication methods are available', () => {
-    const mockClient = createClient();
+    const { authApi } = require('../services/api.ts');
     
-    expect(mockClient.auth.getSession).toBeDefined();
-    expect(mockClient.auth.signInWithPassword).toBeDefined();
-    expect(mockClient.auth.signUp).toBeDefined();
-    expect(mockClient.auth.signOut).toBeDefined();
+    expect(authApi.getSession).toBeDefined();
+    expect(authApi.signIn).toBeDefined();
+    expect(authApi.signUp).toBeDefined();
+    expect(authApi.signOut).toBeDefined();
   });
 });
 
@@ -487,4 +492,4 @@ describe('End-to-End Scenarios', () => {
     
     expect(screen.getByText('Welcome, jane@example.com')).toBeInTheDocument();
   });
-}); 
+});    

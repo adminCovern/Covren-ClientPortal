@@ -6,48 +6,62 @@
     "build": "npx tailwindcss -i ./styles.css -o ./dist/styles.css --minify && npx babel index.jsx --out-dir dist --presets=@babel/preset-env,@babel/preset-react && cp index.html dist/ && cp favicon.io dist/favicon.ico",
     "dev": "npx tailwindcss -i ./styles.css -o ./dist/styles.css --watch & npx babel index.jsx --out-dir dist --presets=@babel/preset-env,@babel/preset-react --watch",
     "test": "jest",
-    "start": "npx serve dist -s"
+    "start": "node api-backend.js",
+    "start-static": "npx serve dist -s"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.7",
+    "@babel/plugin-transform-modules-umd": "^7.24.7",
     "@babel/preset-env": "^7.24.7",
     "@babel/preset-react": "^7.24.7",
-    "@babel/plugin-transform-modules-umd": "^7.24.7",
     "@testing-library/react": "^16.0.0",
     "autoprefixer": "^10.4.19",
     "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.0.5",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
+    "pg": "^8.16.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "express": "^4.18.2",
-    "helmet": "^7.1.0",
-    "compression": "^1.7.4",
-    "express-rate-limit": "^7.1.5",
-    "cors": "^2.8.5",
-    "morgan": "^1.10.0",
-    "serve": "^14.2.1"
+    "react-dom": "^18.3.1"
   },
   "babel": {
     "presets": [
       [
         "@babel/preset-env",
         {
-          "modules": "iife",
+          "modules": "auto",
           "targets": {
-            "browsers": ["last 2 versions", "> 0.5%", "not dead"]
-          },
-          "exclude": ["@supabase/supabase-js"]
+            "browsers": [
+              "last 2 versions",
+              "> 0.5%",
+              "not dead"
+            ]
+          }
         }
       ],
       "@babel/preset-react"
     ],
     "plugins": [
       "@babel/plugin-transform-modules-umd"
-    ]
+    ],
+    "env": {
+      "test": {
+        "presets": [
+          [
+            "@babel/preset-env",
+            {
+              "modules": "commonjs",
+              "targets": {
+                "node": "current"
+              }
+            }
+          ],
+          "@babel/preset-react"
+        ]
+      }
+    }
   },
   "jest": {
     "testEnvironment": "jsdom"

@@ -1,46 +1,29 @@
-const { useState, useEffect, useCallback, createElement } = window.React;
-
 const App = () => {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const Dashboard = window.Dashboard;
+  const [user, setUser] = window.React.useState(null);
+  const [session, setSession] = window.React.useState(null);
+  const [loading, setLoading] = window.React.useState(true);
+  const [error, setError] = window.React.useState(null);
+  const [isRegistering, setIsRegistering] = window.React.useState(false);
 
   // Initialize app and check session
-  const initializeApp = useCallback(async () => {
+  const initializeApp = window.React.useCallback(async () => {
     try {
       setLoading(true);
-      console.log('App: Initializing app...');
-      
-      const authApi = window.authApi;
-      if (!authApi) {
-        console.error('App: authApi not found on window');
-        setError('Authentication service not available');
-        setLoading(false);
-        return;
-      }
-      
-      const response = await authApi.getSession();
-      console.log('App: Session response:', response);
+      const response = await window.authApi.getSession();
       
       if (response.success && response.data) {
         setUser(response.data.user);
         setSession(response.data.session);
-        console.log('App: User authenticated:', response.data.user);
-      } else {
-        console.log('App: No valid session found');
       }
       setLoading(false);
     } catch (error) {
-      console.error('App: Failed to initialize app:', error);
+      console.error('Failed to initialize app:', error);
       setError('Failed to initialize application');
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
+  window.React.useEffect(() => {
     initializeApp();
   }, [initializeApp]);
 
@@ -48,23 +31,18 @@ const App = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('App: Attempting login...');
       
-      const authApi = window.authApi;
-      const response = await authApi.signIn(credentials);
-      console.log('App: Login response:', response);
+      const response = await window.authApi.signIn(credentials);
       
       if (response.success && response.data) {
         setUser(response.data.user);
         setSession(response.data.session);
-        console.log('App: Login successful');
       } else {
         setError(response.error || 'Login failed');
-        console.log('App: Login failed:', response.error);
       }
       setLoading(false);
     } catch (error) {
-      console.error('App: Login error:', error);
+      console.error('Login error:', error);
       setError('Login failed');
       setLoading(false);
     }
@@ -72,39 +50,37 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      console.log('App: Logging out...');
-      const authApi = window.authApi;
-      await authApi.signOut();
+      await window.authApi.signOut();
       setUser(null);
       setSession(null);
     } catch (error) {
-      console.error('App: Logout error:', error);
+      console.error('Logout error:', error);
     }
   };
 
   if (loading) {
-    return createElement('div', {
+    return window.React.createElement('div', {
       className: "min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white flex items-center justify-center"
-    }, createElement('div', {
+    }, window.React.createElement('div', {
       className: "animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"
     }));
   }
 
   if (!user || !session) {
-    return createElement('div', {
+    return window.React.createElement('div', {
       className: "min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white"
     }, [
-      createElement('div', {
+      window.React.createElement('div', {
         key: 'auth-container',
         className: "flex items-center justify-center min-h-screen"
-      }, createElement('div', {
+      }, window.React.createElement('div', {
         className: "w-full max-w-md bg-gray-800 p-8 rounded-lg"
       }, [
-        createElement('h2', {
+        window.React.createElement('h2', {
           key: 'title',
           className: "text-2xl font-bold mb-6"
         }, 'Login'),
-        createElement('form', {
+        window.React.createElement('form', {
           key: 'form',
           onSubmit: (e) => {
             e.preventDefault();
@@ -115,15 +91,15 @@ const App = () => {
             });
           }
         }, [
-          createElement('div', {
+          window.React.createElement('div', {
             key: 'email-field',
             className: "mb-4"
           }, [
-            createElement('label', {
+            window.React.createElement('label', {
               key: 'email-label',
               className: "block text-sm font-medium mb-2"
             }, 'Email'),
-            createElement('input', {
+            window.React.createElement('input', {
               key: 'email-input',
               type: "email",
               name: "email",
@@ -132,15 +108,15 @@ const App = () => {
               className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
             })
           ]),
-          createElement('div', {
+          window.React.createElement('div', {
             key: 'password-field',
             className: "mb-6"
           }, [
-            createElement('label', {
+            window.React.createElement('label', {
               key: 'password-label',
               className: "block text-sm font-medium mb-2"
             }, 'Password'),
-            createElement('input', {
+            window.React.createElement('input', {
               key: 'password-input',
               type: "password",
               name: "password",
@@ -149,7 +125,7 @@ const App = () => {
               className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
             })
           ]),
-          createElement('button', {
+          window.React.createElement('button', {
             key: 'submit-button',
             type: "submit",
             disabled: loading,
@@ -157,12 +133,12 @@ const App = () => {
           }, loading ? 'Logging in...' : 'Login')
         ])
       ])),
-      error && createElement('div', {
+      error && window.React.createElement('div', {
         key: 'error-toast',
         className: "fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg"
       }, [
         error,
-        createElement('button', {
+        window.React.createElement('button', {
           key: 'close-error',
           onClick: () => setError(null),
           className: "ml-4 text-white hover:text-gray-200"
@@ -171,49 +147,46 @@ const App = () => {
     ]);
   }
 
-  console.log('App: Rendering authenticated app with user:', user);
-  return createElement('div', {
+  return window.React.createElement('div', {
     className: "min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white"
   }, [
-    createElement('div', {
+    window.React.createElement('div', {
       key: 'main-container',
       className: "flex h-screen"
     }, [
-      createElement('div', {
+      window.React.createElement('div', {
         key: 'sidebar',
         className: "w-64 bg-gray-800 border-r border-gray-700"
-      }, createElement('div', {
+      }, window.React.createElement('div', {
         className: "p-4"
       }, [
-        createElement('h1', {
+        window.React.createElement('h1', {
           key: 'title',
           className: "text-xl font-bold"
         }, 'Covren Portal'),
-        createElement('div', {
+        window.React.createElement('div', {
           key: 'user-info',
           className: "mt-4"
-        }, createElement('p', {
+        }, window.React.createElement('p', {
           className: "text-sm text-gray-300"
-        }, `Welcome, ${user?.full_name || user?.email || 'User'}`)),
-        createElement('button', {
+        }, `Welcome, ${user.full_name || user.email}`)),
+        window.React.createElement('button', {
           key: 'logout-button',
           onClick: handleLogout,
           className: "mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
         }, 'Logout')
       ])),
-      createElement('div', {
+      window.React.createElement('div', {
         key: 'content',
         className: "flex-1"
-      }, Dashboard ? createElement(Dashboard, { user: user }) : createElement('div', {
-        className: "p-8"
-      }, 'Dashboard component not found'))
+      }, window.React.createElement(window.Dashboard, { user: user }))
     ]),
-    error && createElement('div', {
+    error && window.React.createElement('div', {
       key: 'error-toast',
       className: "fixed top-4 right-4 bg-red-600 text-white p-4 rounded-lg"
     }, [
       error,
-      createElement('button', {
+      window.React.createElement('button', {
         key: 'close-error',
         onClick: () => setError(null),
         className: "ml-4 text-white hover:text-gray-200"
