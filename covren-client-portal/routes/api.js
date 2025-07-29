@@ -410,6 +410,69 @@ router.post('/notifications/email', authenticateToken, [
   }
 });
 
+// Update user profile
+router.put('/auth/profile', authenticateToken, [
+  body('name').optional().isLength({ min: 1, max: 100 }).trim().escape(),
+  body('email').optional().isEmail().normalizeEmail(),
+  body('company').optional().isLength({ max: 100 }).trim().escape(),
+  body('position').optional().isLength({ max: 100 }).trim().escape()
+], validate, async (req, res) => {
+  try {
+    const { name, email, company, position } = req.body;
+    const userId = req.user.id;
+
+    // Check if email is being changed and if it already exists
+    if (email) {
+      const existingUser = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email, userId]
+      );
+
+      if (existingUser.rows.length > 0) {
+        return res.status(400).json({ error: 'Email already in use by another account' });
+      }
+    }
+
+    // Update user table
+    const userUpdateQuery = 'UPDATE users SET email = COALESCE($1, email), updated_at = NOW() WHERE id = $2 RETURNING id, email, role';
+    const userResult = await pool.query(userUpdateQuery, [email, userId]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update or create user profile
+    const profileQuery = `
+      INSERT INTO user_profiles (id, full_name, company, position) 
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (id) 
+      DO UPDATE SET 
+        full_name = COALESCE($2, user_profiles.full_name),
+        company = COALESCE($3, user_profiles.company),
+        position = COALESCE($4, user_profiles.position),
+        updated_at = NOW()
+      RETURNING *
+    `;
+    
+    await pool.query(profileQuery, [userId, name, company, position]);
+
+    const user = userResult.rows[0];
+    return res.json({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: name || user.name,
+      company: company || user.company,
+      position: position || user.position
+    });
+
+  } catch (error) {
+    console.error('Profile update error:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Profile update failed' });
+    }
+  }
+});
 // Health check for API
 router.get('/health', (req, res) => {
   res.json({ 
@@ -419,4 +482,4 @@ router.get('/health', (req, res) => {
   });
 });
 
-module.exports = router;    
+module.exports = router;

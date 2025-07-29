@@ -201,7 +201,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO activity_logs (user_id, project_id, action, resource_type, resource_id, details)
     VALUES (
-        COALESCE(NEW.created_by, OLD.created_by),
+        COALESCE(current_user_id(), NEW.created_by, OLD.created_by),
         COALESCE(NEW.project_id, OLD.project_id),
         TG_OP,
         TG_TABLE_NAME,
@@ -288,9 +288,9 @@ RETURNS TABLE (
 DECLARE
     user_record RECORD;
 BEGIN
-    SELECT id, email, password_hash, role INTO user_record
-    FROM users 
-    WHERE email = user_email AND is_active = TRUE;
+    SELECT u.id, u.email, u.password_hash, u.role INTO user_record
+    FROM users u
+    WHERE u.email = user_email AND u.is_active = TRUE;
     
     IF user_record IS NULL THEN
         RETURN QUERY SELECT NULL::UUID, NULL::VARCHAR, NULL::VARCHAR, NULL::VARCHAR, FALSE;
@@ -377,3 +377,194 @@ SELECT
 FROM users 
 WHERE email = 'admin@covrenfirm.com'
 ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS user_session_context (
+    session_id VARCHAR(255) PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+-- Function to get current user ID from session context
+CREATE OR REPLACE FUNCTION current_user_id()
+RETURNS UUID AS $$
+DECLARE
+    user_uuid UUID;
+    session_token VARCHAR(255);
+BEGIN
+    session_token := current_setting('app.current_session_token', true);
+    
+    IF session_token IS NULL OR session_token = '' THEN
+        RETURN NULL;
+    END IF;
+    
+    SELECT us.user_id INTO user_uuid
+    FROM user_sessions us
+    WHERE us.session_token = session_token 
+    AND us.expires_at > NOW() 
+    AND us.is_active = TRUE;
+    
+    RETURN user_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to set current session
+CREATE OR REPLACE FUNCTION set_current_session(session_token VARCHAR)
+RETURNS BOOLEAN AS $$
+BEGIN
+    PERFORM set_config('app.current_session_token', session_token, true);
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Enable RLS on all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE message_recipients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own profile" ON users
+    FOR SELECT USING (id = current_user_id());
+
+CREATE POLICY "Users can update their own profile" ON users
+    FOR UPDATE USING (id = current_user_id());
+
+CREATE POLICY "Users can view their own sessions" ON user_sessions
+    FOR SELECT USING (user_id = current_user_id());
+
+CREATE POLICY "Users can manage their own sessions" ON user_sessions
+    FOR ALL USING (user_id = current_user_id());
+
+-- Projects RLS Policies
+CREATE POLICY "Users can view projects they are members of" ON projects
+    FOR SELECT USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users WHERE project_id = id
+        ) OR created_by = current_user_id() OR client_id = current_user_id()
+    );
+
+CREATE POLICY "Project owners and admins can update projects" ON projects
+    FOR UPDATE USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users 
+            WHERE project_id = id AND role IN ('owner', 'admin')
+        ) OR created_by = current_user_id()
+    );
+
+CREATE POLICY "Project owners can delete projects" ON projects
+    FOR DELETE USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users 
+            WHERE project_id = id AND role = 'owner'
+        ) OR created_by = current_user_id()
+    );
+
+CREATE POLICY "Authenticated users can create projects" ON projects
+    FOR INSERT WITH CHECK (current_user_id() IS NOT NULL);
+
+-- Project Users RLS Policies
+CREATE POLICY "Users can view project members" ON project_users
+    FOR SELECT USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users WHERE project_id = project_users.project_id
+        )
+    );
+
+CREATE POLICY "Project owners and admins can manage members" ON project_users
+    FOR ALL USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users 
+            WHERE project_id = project_users.project_id AND role IN ('owner', 'admin')
+        )
+    );
+
+-- Documents RLS Policies
+CREATE POLICY "Users can view documents in their projects" ON documents
+    FOR SELECT USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users WHERE project_id = documents.project_id
+        ) OR is_public = true
+    );
+
+CREATE POLICY "Project editors and above can upload documents" ON documents
+    FOR INSERT WITH CHECK (
+        current_user_id() IN (
+            SELECT user_id FROM project_users 
+            WHERE project_id = documents.project_id AND role IN ('owner', 'admin', 'editor')
+        )
+    );
+
+CREATE POLICY "Document uploaders and project admins can update documents" ON documents
+    FOR UPDATE USING (
+        uploaded_by = current_user_id() OR
+        current_user_id() IN (
+            SELECT user_id FROM project_users 
+            WHERE project_id = documents.project_id AND role IN ('owner', 'admin')
+        )
+    );
+
+-- Messages RLS Policies
+CREATE POLICY "Users can view messages in their projects" ON messages
+    FOR SELECT USING (
+        current_user_id() IN (
+            SELECT user_id FROM project_users WHERE project_id = messages.project_id
+        )
+    );
+
+CREATE POLICY "Project members can send messages" ON messages
+    FOR INSERT WITH CHECK (
+        current_user_id() IN (
+            SELECT user_id FROM project_users WHERE project_id = messages.project_id
+        )
+    );
+
+CREATE POLICY "Message senders can edit their messages" ON messages
+    FOR UPDATE USING (sender_id = current_user_id());
+
+-- Message Recipients RLS Policies
+CREATE POLICY "Users can view their message receipts" ON message_recipients
+    FOR SELECT USING (user_id = current_user_id());
+
+CREATE POLICY "Users can update their message receipts" ON message_recipients
+    FOR UPDATE USING (user_id = current_user_id());
+
+CREATE POLICY "System can create message receipts" ON message_recipients
+    FOR INSERT WITH CHECK (true);
+
+-- Notifications RLS Policies
+CREATE POLICY "Users can view their own notifications" ON notifications
+    FOR SELECT USING (user_id = current_user_id());
+
+CREATE POLICY "Users can update their own notifications" ON notifications
+    FOR UPDATE USING (user_id = current_user_id());
+
+CREATE POLICY "System can create notifications" ON notifications
+    FOR INSERT WITH CHECK (true);
+
+-- User Profiles RLS Policies
+CREATE POLICY "Users can view their own profile" ON user_profiles
+    FOR SELECT USING (id = current_user_id());
+
+CREATE POLICY "Users can update their own profile" ON user_profiles
+    FOR UPDATE USING (id = current_user_id());
+
+CREATE POLICY "Users can insert their own profile" ON user_profiles
+    FOR INSERT WITH CHECK (id = current_user_id());
+
+-- Activity Logs RLS Policies
+CREATE POLICY "Users can view activity logs for their projects" ON activity_logs
+    FOR SELECT USING (
+        user_id = current_user_id() OR
+        project_id IN (
+            SELECT project_id FROM project_users WHERE user_id = current_user_id()
+        )
+    );
+
+CREATE POLICY "System can create activity logs" ON activity_logs
+    FOR INSERT WITH CHECK (true);
