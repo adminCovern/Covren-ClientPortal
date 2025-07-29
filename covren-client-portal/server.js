@@ -12,6 +12,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cluster = require('cluster');
 const os = require('os');
+const apiRoutes = require('./routes/api');
 
 // Environment configuration
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,7 @@ const securityConfig = {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -90,12 +92,20 @@ app.use(cors({
 // Rate limiting
 app.use(limiter);
 
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Logging middleware
 if (NODE_ENV === 'production') {
   app.use(morgan('combined', {
     stream: {
       write: (message) => {
-        fs.appendFileSync('/var/log/pm2/sovereign-command-center-access.log', message);
+        const logDir = path.join(__dirname, 'logs');
+        if (!fs.existsSync(logDir)) {
+          fs.mkdirSync(logDir, { recursive: true });
+        }
+        fs.appendFileSync(path.join(logDir, 'sovereign-command-center-access.log'), message);
       }
     }
   }));
@@ -128,7 +138,11 @@ app.use((req, res, next) => {
         errorCount: errorCount
       };
       
-      fs.appendFileSync('/var/log/pm2/sovereign-command-center-performance.log', JSON.stringify(logEntry) + '\n');
+      const logDir = path.join(__dirname, 'logs');
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+      fs.appendFileSync(path.join(logDir, 'sovereign-command-center-performance.log'), JSON.stringify(logEntry) + '\n');
     }
   });
   
@@ -202,11 +216,8 @@ app.post('/api/upload', (req, res) => {
   res.status(501).json({ error: 'File upload not yet implemented' });
 });
 
-// API proxy to Supabase
-app.use('/api', (req, res) => {
-  // API proxy handling will be implemented here
-  res.status(501).json({ error: 'API proxy not yet implemented' });
-});
+// API routes
+app.use('/api', apiRoutes);
 
 // SPA routing - serve index.html for all non-API routes
 app.get('*', (req, res) => {
@@ -225,7 +236,11 @@ app.use((err, req, res, next) => {
   console.error('Server error:', err);
   
   if (NODE_ENV === 'production') {
-    fs.appendFileSync('/var/log/pm2/sovereign-command-center-error.log', 
+    const logDir = path.join(__dirname, 'logs');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    fs.appendFileSync(path.join(logDir, 'sovereign-command-center-error.log'), 
       `${new Date().toISOString()} - ${err.stack}\n`);
   }
   
@@ -281,8 +296,12 @@ const server = app.listen(PORT, HOST, () => {
 // Server error handling
 server.on('error', (err) => {
   console.error('Server error:', err);
-  fs.appendFileSync('/var/log/pm2/sovereign-command-center-error.log', 
+  const logDir = path.join(__dirname, 'logs');
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  fs.appendFileSync(path.join(logDir, 'sovereign-command-center-error.log'), 
     `${new Date().toISOString()} - Server error: ${err.stack}\n`);
 });
 
-module.exports = app; 
+module.exports = app;     

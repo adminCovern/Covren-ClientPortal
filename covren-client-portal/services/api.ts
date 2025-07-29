@@ -583,6 +583,79 @@ export const notificationsApi = {
       };
     }
   },
+
+  /**
+   * Create notification
+   */
+  async createNotification(notificationData: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiRequest('notifications', {
+        method: 'POST',
+        body: JSON.stringify(notificationData),
+      });
+      return { data: response, error: null, success: true };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Failed to create notification', 
+        success: false 
+      };
+    }
+  },
+
+  /**
+   * Get notification preferences
+   */
+  async getNotificationPreferences(): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiRequest('notifications/preferences');
+      return { data: response, error: null, success: true };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Failed to get preferences', 
+        success: false 
+      };
+    }
+  },
+
+  /**
+   * Update notification preferences
+   */
+  async updateNotificationPreferences(preferences: any): Promise<ApiResponse<void>> {
+    try {
+      await apiRequest('notifications/preferences', {
+        method: 'PUT',
+        body: JSON.stringify(preferences),
+      });
+      return { data: null, error: null, success: true };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Failed to update preferences', 
+        success: false 
+      };
+    }
+  },
+
+  /**
+   * Send email notification
+   */
+  async sendEmailNotification(emailData: any): Promise<ApiResponse<void>> {
+    try {
+      await apiRequest('notifications/email', {
+        method: 'POST',
+        body: JSON.stringify(emailData),
+      });
+      return { data: null, error: null, success: true };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Failed to send email', 
+        success: false 
+      };
+    }
+  },
 };
 
 // User Management API
@@ -712,4 +785,4 @@ export const realtimeApi = {
     console.log('Subscribing to notifications');
     return () => console.log('Unsubscribing from notifications');
   },
-}; 
+};   

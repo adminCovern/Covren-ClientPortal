@@ -1,8 +1,10 @@
 // Sovereign Command Center Notification Center Component
 // Covren Firm LLC - Production Grade Notification Management
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Notification } from '../../types';
+import NotificationPreferences from './NotificationPreferences';
+import NotificationHistory from './NotificationHistory';
 
 interface NotificationCenterProps {
   notifications: Notification[];
@@ -11,12 +13,21 @@ interface NotificationCenterProps {
   onClose: () => void;
 }
 
-const NotificationCenter: React.FC<NotificationCenterProps> = ({
+const NotificationCenter = ({
   notifications,
   onRead,
   onDelete,
   onClose,
 }) => {
+  const [filter, setFilter] = useState('all');
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const filteredNotifications = notifications.filter(notification => {
+    if (filter === 'all') return true;
+    if (filter === 'unread') return !notification.read_at;
+    return notification.type === filter;
+  });
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'success':
@@ -78,19 +89,59 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-lg font-semibold text-white">Notifications</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowHistory(true)}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Notification History"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowPreferences(true)}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Notification Preferences"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Controls */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex flex-wrap gap-2">
+            {['all', 'unread', 'info', 'success', 'warning', 'error', 'critical'].map((filterType) => (
+              <button
+                key={filterType}
+                onClick={() => setFilter(filterType)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  filter === filterType
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Notifications List */}
         <div className="flex-1 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +153,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             </div>
           ) : (
             <div className="p-4 space-y-3">
-              {notifications.map((notification) => (
+              {filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
                   className={`
@@ -168,7 +219,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           <div className="p-4 border-t border-gray-700">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">
-                {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                {filteredNotifications.length} of {notifications.length} notifications
               </span>
               <button
                 onClick={() => {
@@ -183,9 +234,19 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             </div>
           </div>
         )}
+
+        {/* Notification Preferences Modal */}
+        {showPreferences && (
+          <NotificationPreferences onClose={() => setShowPreferences(false)} />
+        )}
+
+        {/* Notification History Modal */}
+        {showHistory && (
+          <NotificationHistory onClose={() => setShowHistory(false)} />
+        )}
       </div>
     </div>
   );
 };
 
-export default NotificationCenter; 
+export default NotificationCenter;      

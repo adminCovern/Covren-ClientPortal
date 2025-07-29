@@ -6,17 +6,20 @@ import type { User, Project } from '../../types';
 import { projectsApi } from '../../services/api';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ProjectCreator from './ProjectCreator';
+import StatusUpdater from '../status/StatusUpdater';
 
 interface DashboardProps {
   user: User;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
-  const [projects, setProjects] = useState<Project[]>([]);
+const Dashboard = ({ user }) => {
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedView, setSelectedView] = useState<'overview' | 'projects' | 'analytics'>('overview');
+  const [error, setError] = useState(null);
+  const [selectedView, setSelectedView] = useState('overview');
   const [showProjectCreator, setShowProjectCreator] = useState(false);
+  const [showStatusUpdater, setShowStatusUpdater] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     loadProjects();
@@ -46,6 +49,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
   const handleCancelProjectCreation = () => {
     setShowProjectCreator(false);
+  };
+
+  const handleStatusUpdate = (statusData) => {
+    console.log('Status update posted:', statusData);
+    setShowStatusUpdater(false);
+    setSelectedProject(null);
+  };
+
+  const handleCancelStatusUpdate = () => {
+    setShowStatusUpdater(false);
+    setSelectedProject(null);
+  };
+
+  const handlePostStatusUpdate = (project) => {
+    setSelectedProject(project);
+    setShowStatusUpdater(true);
   };
 
   const getGreeting = () => {
@@ -255,7 +274,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     )}
                     <div className="flex items-center justify-between text-sm text-gray-400">
                       <span>Priority: {project.priority}</span>
-                      <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handlePostStatusUpdate(project)}
+                          className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                          title="Post Status Update"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.718 9.168-4.624v0A1.76 1.76 0 0119.832 3v4.632a1.76 1.76 0 01-1.832 1.632h-1.832z" />
+                          </svg>
+                        </button>
+                        <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -311,8 +341,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
         </div>
       )}
+
+      {/* Status Updater Modal */}
+      {showStatusUpdater && selectedProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <StatusUpdater
+              projectId={selectedProject.id}
+              projectName={selectedProject.name}
+              onStatusUpdate={handleStatusUpdate}
+              onCancel={handleCancelStatusUpdate}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Status Updater Modal */}
+      {showStatusUpdater && selectedProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <StatusUpdater
+              projectId={selectedProject.id}
+              projectName={selectedProject.name}
+              onStatusUpdate={handleStatusUpdate}
+              onCancel={handleCancelStatusUpdate}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;        
