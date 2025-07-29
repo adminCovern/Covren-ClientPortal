@@ -475,7 +475,7 @@
             case 0:
               _context2.p = 0;
               _context2.n = 1;
-              return fetch('http://localhost:8080/api/auth/login', {
+              return fetch("".concat(window.location.origin, "/api/auth/login"), {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
@@ -538,7 +538,7 @@
                 break;
               }
               _context3.n = 1;
-              return fetch('http://localhost:8080/api/auth/logout', {
+              return fetch("".concat(window.location.origin, "/api/auth/logout"), {
                 method: 'POST',
                 headers: {
                   'Authorization': "Bearer ".concat(token),
@@ -584,7 +584,7 @@
               });
             case 1:
               _context4.n = 2;
-              return fetch('http://localhost:8080/api/auth/me', {
+              return fetch("".concat(window.location.origin, "/api/auth/me"), {
                 headers: {
                   'Authorization': "Bearer ".concat(token),
                   'Content-Type': 'application/json'
@@ -666,7 +666,7 @@
                 query += "?".concat(params.toString());
               }
               _context5.n = 2;
-              return fetch("http://localhost:8080/api".concat(query), {
+              return fetch("".concat(window.location.origin, "/api").concat(query), {
                 headers: {
                   'Authorization': "Bearer ".concat(token),
                   'Content-Type': 'application/json'
@@ -724,7 +724,7 @@
               });
             case 1:
               _context6.n = 2;
-              return fetch('http://localhost:8080/api/projects', {
+              return fetch("".concat(window.location.origin, "/api/projects"), {
                 method: 'POST',
                 headers: {
                   'Authorization': "Bearer ".concat(token),
@@ -839,7 +839,7 @@
                 break;
               }
               _context7.n = 1;
-              return fetch('http://localhost:8080/api/auth/me', {
+              return fetch("".concat(window.location.origin, "/api/auth/me"), {
                 headers: {
                   'Authorization': "Bearer ".concat(token),
                   'Content-Type': 'application/json'
@@ -905,7 +905,7 @@
               setLoading(true);
               setError(null);
               _context8.n = 2;
-              return fetch('http://localhost:8080/api/auth/login', {
+              return fetch("".concat(window.location.origin, "/api/auth/login"), {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
@@ -980,7 +980,7 @@
               setLoading(true);
               setError(null);
               _context9.n = 3;
-              return fetch('http://localhost:8080/api/auth/register', {
+              return fetch("".concat(window.location.origin, "/api/auth/register"), {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
@@ -1050,7 +1050,7 @@
                 break;
               }
               _context0.n = 1;
-              return fetch('http://localhost:8080/api/auth/logout', {
+              return fetch("".concat(window.location.origin, "/api/auth/logout"), {
                 method: 'POST',
                 headers: {
                   'Authorization': "Bearer ".concat(token),
@@ -1288,6 +1288,11 @@
       }
     }));
   };
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      "default": App
+    };
+  }
 
   // Render the app once dependencies are loaded
   initializeApp().then(function () {

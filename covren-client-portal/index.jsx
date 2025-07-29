@@ -423,7 +423,7 @@ window.Dashboard = Dashboard;
 const authApi = {
   async signIn(credentials) {
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      const response = await fetch(`${window.location.origin}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -461,7 +461,7 @@ const authApi = {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        await fetch('http://localhost:8080/api/auth/logout', {
+        await fetch(`${window.location.origin}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -488,7 +488,7 @@ const authApi = {
         return { data: null, error: 'No token found', success: false };
       }
 
-      const response = await fetch('http://localhost:8080/api/auth/me', {
+      const response = await fetch(`${window.location.origin}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -544,7 +544,7 @@ const projectsApi = {
         query += `?${params.toString()}`;
       }
       
-      const response = await fetch(`http://localhost:3000/api${query}`, {
+      const response = await fetch(`${window.location.origin}/api${query}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -572,7 +572,7 @@ const projectsApi = {
         return { data: null, error: 'No authentication token', success: false };
       }
 
-      const response = await fetch('http://localhost:3000/api/projects', {
+      const response = await fetch(`${window.location.origin}/api/projects`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -627,7 +627,7 @@ const App = () => {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        const response = await fetch('http://localhost:8080/api/auth/me', {
+        const response = await fetch(`${window.location.origin}/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -663,7 +663,7 @@ const App = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      const response = await fetch(`${window.location.origin}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -706,7 +706,7 @@ const App = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('http://localhost:8080/api/auth/register', {
+      const response = await fetch(`${window.location.origin}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -747,7 +747,7 @@ const App = () => {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        await fetch('http://localhost:8080/api/auth/logout', {
+        await fetch(`${window.location.origin}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
