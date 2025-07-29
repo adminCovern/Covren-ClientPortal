@@ -11,11 +11,11 @@ interface ProjectCreatorProps {
   onCancel: () => void;
 }
 
-const ProjectCreator: React.FC<ProjectCreatorProps> = ({
+const ProjectCreator = ({
   onProjectCreated,
   onCancel,
 }) => {
-  const [formData, setFormData] = useState<ProjectForm>({
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
     priority: 'medium',
@@ -24,11 +24,11 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
     tags: [],
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState('');
 
-  const handleInputChange = useCallback((field: keyof ProjectForm, value: any) => {
+  const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
@@ -37,7 +37,7 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
     }
   }, [errors]);
 
-  const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleTagInputKeyDown = useCallback((e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       const tag = tagInput.trim();
@@ -52,7 +52,7 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
     handleInputChange('tags', formData.tags.filter(tag => tag !== tagToRemove));
   }, [formData.tags, handleInputChange]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     
     // Validate form
@@ -255,4 +255,4 @@ const ProjectCreator: React.FC<ProjectCreatorProps> = ({
   );
 };
 
-export default ProjectCreator; 
+export default ProjectCreator;  

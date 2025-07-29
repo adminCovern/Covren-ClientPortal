@@ -8,7 +8,7 @@ function waitForDependencies(maxRetries = 50) {
     let supabaseInitialized = false;
     const checkDependencies = () => {
       const hasReact = typeof window.React !== 'undefined' && window.React !== null;
-      const hasReactDOM = typeof window.ReactDOM !== 'undefined' && window.ReactDOM !== null && typeof window.ReactDOM.render === 'function';
+      const hasReactDOM = typeof window.ReactDOM !== 'undefined' && window.ReactDOM !== null && typeof window.ReactDOM.createRoot === 'function';
       const supabaseModule = window.supabase || window.Supabase;
       let hasSupabase = false;
       if (supabaseModule && typeof supabaseModule === 'object' && !supabaseInitialized) {
@@ -605,9 +605,10 @@ const App = () => {
 // Render the app once dependencies are loaded
 initializeApp().then(() => {
   const { createElement } = window.React;
-  const { render } = window.ReactDOM;
+  const { createRoot } = window.ReactDOM;
   
-  render(createElement(App), document.getElementById('root'));
+  const root = createRoot(document.getElementById('root'));
+  root.render(createElement(App));
 }).catch((error) => {
   console.error('Failed to initialize app:', error);
   document.getElementById('root').innerHTML = `
