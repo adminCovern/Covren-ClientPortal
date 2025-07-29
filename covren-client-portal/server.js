@@ -33,6 +33,7 @@ const securityConfig = {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -118,6 +119,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
 app.use(limiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging middleware
 if (NODE_ENV === 'production') {
@@ -335,4 +340,4 @@ server.on('error', (err) => {
   }
 });
 
-module.exports = app;        
+module.exports = app;   

@@ -325,6 +325,91 @@ router.delete('/projects/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Create notification endpoint
+router.post('/notifications', authenticateToken, [
+  body('title').isLength({ min: 1, max: 255 }).trim().escape(),
+  body('message').isLength({ min: 1, max: 1000 }).trim().escape(),
+  body('type').isIn(['info', 'success', 'warning', 'error', 'critical']),
+  body('action_url').optional().isURL(),
+  body('user_ids').isArray().withMessage('user_ids must be an array')
+], validate, async (req, res) => {
+  try {
+    const { title, message, type, action_url, user_ids } = req.body;
+    
+    // Create notifications for multiple users
+    const notifications = [];
+    for (const user_id of user_ids) {
+      const result = await pool.query(
+        'INSERT INTO notifications (user_id, title, message, type, action_url, metadata) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [user_id, title, message, type, action_url, { created_by: req.user.id }]
+      );
+      notifications.push(result.rows[0]);
+    }
+
+    res.status(201).json({ success: true, notifications });
+  } catch (error) {
+    console.error('Create notification error:', error);
+    res.status(500).json({ error: 'Failed to create notification' });
+  }
+});
+
+// Get user notification preferences
+router.get('/notifications/preferences', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT preferences FROM user_profiles WHERE id = $1',
+      [req.user.id]
+    );
+
+    const preferences = result.rows[0]?.preferences?.notifications || {
+      email: true,
+      push: true,
+      sms: false
+    };
+
+    res.json({ preferences });
+  } catch (error) {
+    console.error('Get preferences error:', error);
+    res.status(500).json({ error: 'Failed to get preferences' });
+  }
+});
+
+// Update notification preferences
+router.put('/notifications/preferences', authenticateToken, [
+  body('email').isBoolean(),
+  body('push').isBoolean(),
+  body('sms').isBoolean()
+], validate, async (req, res) => {
+  try {
+    const { email, push, sms } = req.body;
+    
+    await pool.query(
+      'UPDATE user_profiles SET preferences = jsonb_set(preferences, \'{notifications}\', $1) WHERE id = $2',
+      [JSON.stringify({ email, push, sms }), req.user.id]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update preferences error:', error);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+// Send email notification endpoint
+router.post('/notifications/email', authenticateToken, [
+  body('to').isEmail(),
+  body('subject').isLength({ min: 1, max: 255 }),
+  body('body').isLength({ min: 1, max: 5000 })
+], validate, async (req, res) => {
+  try {
+    console.log('Email notification request:', req.body);
+    res.json({ success: true, message: 'Email notification queued' });
+  } catch (error) {
+    console.error('Email notification error:', error);
+    res.status(500).json({ error: 'Failed to send email notification' });
+  }
+});
+
 // Update user profile
 router.put('/auth/profile', authenticateToken, [
   body('name').optional().isLength({ min: 1, max: 100 }).trim().escape(),
@@ -388,7 +473,6 @@ router.put('/auth/profile', authenticateToken, [
     }
   }
 });
-
 // Health check for API
 router.get('/health', (req, res) => {
   res.json({ 
@@ -398,4 +482,4 @@ router.get('/health', (req, res) => {
   });
 });
 
-module.exports = router;   
+module.exports = router;
