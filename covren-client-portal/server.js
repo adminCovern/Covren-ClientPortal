@@ -3,6 +3,9 @@
 // NO CONTAINERS, NO DOCKER, NO VIRTUAL ENVIRONMENTS
 
 const express = require('express');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
 const helmet = require('helmet');
@@ -12,6 +15,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cluster = require('cluster');
 const os = require('os');
+const apiRoutes = require('./routes/api');
 
 // Environment configuration
 const PORT = process.env.PORT || 3000;
@@ -87,18 +91,52 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres123@localhost:5432/sovereign_command_center',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Session middleware
+app.use(session({
+  store: new pgSession({
+    pool: pool,
+    tableName: 'session'
+  }),
+  secret: process.env.SESSION_SECRET || 'your-session-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Rate limiting
 app.use(limiter);
 
 // Logging middleware
 if (NODE_ENV === 'production') {
-  app.use(morgan('combined', {
-    stream: {
-      write: (message) => {
-        fs.appendFileSync('/var/log/pm2/sovereign-command-center-access.log', message);
-      }
+  const logDir = '/var/log/pm2';
+  try {
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
     }
-  }));
+    app.use(morgan('combined', {
+      stream: {
+        write: (message) => {
+          fs.appendFileSync('/var/log/pm2/sovereign-command-center-access.log', message);
+        }
+      }
+    }));
+  } catch (error) {
+    console.warn('Could not create log directory, falling back to console logging:', error.message);
+    app.use(morgan('combined'));
+  }
 } else {
   app.use(morgan('dev'));
 }
@@ -128,7 +166,11 @@ app.use((req, res, next) => {
         errorCount: errorCount
       };
       
-      fs.appendFileSync('/var/log/pm2/sovereign-command-center-performance.log', JSON.stringify(logEntry) + '\n');
+      try {
+        fs.appendFileSync('/var/log/pm2/sovereign-command-center-performance.log', JSON.stringify(logEntry) + '\n');
+      } catch (error) {
+        console.log('Performance metrics:', JSON.stringify(logEntry));
+      }
     }
   });
   
@@ -202,16 +244,16 @@ app.post('/api/upload', (req, res) => {
   res.status(501).json({ error: 'File upload not yet implemented' });
 });
 
-// API proxy to Supabase
-app.use('/api', (req, res) => {
-  // API proxy handling will be implemented here
-  res.status(501).json({ error: 'API proxy not yet implemented' });
-});
+// API routes
+app.use('/api', apiRoutes);
 
 // SPA routing - serve index.html for all non-API routes
 app.get('*', (req, res) => {
-  // Skip API routes
-  if (req.path.startsWith('/api/') || req.path.startsWith('/health') || req.path.startsWith('/metrics')) {
+  // Skip API routes and static files
+  if (req.path.startsWith('/api/') || 
+      req.path.startsWith('/health') || 
+      req.path.startsWith('/metrics') ||
+      req.path.includes('.')) {
     return res.status(404).json({ error: 'Not found' });
   }
   
@@ -225,8 +267,12 @@ app.use((err, req, res, next) => {
   console.error('Server error:', err);
   
   if (NODE_ENV === 'production') {
-    fs.appendFileSync('/var/log/pm2/sovereign-command-center-error.log', 
-      `${new Date().toISOString()} - ${err.stack}\n`);
+    try {
+      fs.appendFileSync('/var/log/pm2/sovereign-command-center-error.log', 
+        `${new Date().toISOString()} - ${err.stack}\n`);
+    } catch (logError) {
+      console.error('Could not write to error log:', logError.message);
+    }
   }
   
   res.status(500).json({
@@ -281,8 +327,12 @@ const server = app.listen(PORT, HOST, () => {
 // Server error handling
 server.on('error', (err) => {
   console.error('Server error:', err);
-  fs.appendFileSync('/var/log/pm2/sovereign-command-center-error.log', 
-    `${new Date().toISOString()} - Server error: ${err.stack}\n`);
+  try {
+    fs.appendFileSync('/var/log/pm2/sovereign-command-center-error.log', 
+      `${new Date().toISOString()} - Server error: ${err.stack}\n`);
+  } catch (logError) {
+    console.error('Could not write to error log:', logError.message);
+  }
 });
 
-module.exports = app; 
+module.exports = app;        

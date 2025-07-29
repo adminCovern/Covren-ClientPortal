@@ -288,9 +288,9 @@ RETURNS TABLE (
 DECLARE
     user_record RECORD;
 BEGIN
-    SELECT id, email, password_hash, role INTO user_record
-    FROM users 
-    WHERE email = user_email AND is_active = TRUE;
+    SELECT u.id, u.email, u.password_hash, u.role INTO user_record
+    FROM users u
+    WHERE u.email = user_email AND u.is_active = TRUE;
     
     IF user_record IS NULL THEN
         RETURN QUERY SELECT NULL::UUID, NULL::VARCHAR, NULL::VARCHAR, NULL::VARCHAR, FALSE;
