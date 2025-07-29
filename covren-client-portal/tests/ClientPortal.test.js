@@ -1,27 +1,27 @@
 const React = require('react');
 const { render, fireEvent, waitFor } = require('@testing-library/react');
-const { createClient } = require('@supabase/supabase-js');
 const ClientPortal = require('../index.jsx').default;
 
-// Mock Supabase
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({
-    auth: {
-      getSession: jest.fn(() => Promise.resolve({ data: { session: null } })),
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      onAuthStateChange: jest.fn((cb) => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      insert: jest.fn(() => Promise.resolve({ error: null })),
-      delete: jest.fn(() => Promise.resolve({ error: null })),
-    })),
-    channel: jest.fn(() => ({
-      on: jest.fn(() => ({ subscribe: jest.fn() })),
-    })),
-  })),
+jest.mock('../services/api.ts', () => ({
+  authApi: {
+    getSession: jest.fn(() => Promise.resolve({ data: null, error: null, success: false })),
+    signIn: jest.fn(),
+    signUp: jest.fn(),
+    signOut: jest.fn(),
+  },
+  projectsApi: {
+    getUserProjects: jest.fn(() => Promise.resolve({ data: [], error: null, success: true })),
+    createProject: jest.fn(() => Promise.resolve({ data: {}, error: null, success: true })),
+  },
+  documentsApi: {
+    uploadDocument: jest.fn(() => Promise.resolve({ data: {}, error: null, success: true })),
+  },
+  messagesApi: {
+    getMessages: jest.fn(() => Promise.resolve({ data: [], error: null, success: true })),
+  },
+  notificationsApi: {
+    getNotifications: jest.fn(() => Promise.resolve({ data: [], error: null, success: true })),
+  }
 }));
 
 describe('ClientPortal', () => {

@@ -1,19 +1,20 @@
 // Sovereign Command Center Real-time Service
 // Covren Firm LLC - Production Grade WebSocket Integration
 
-import type { 
-  Project, 
-  Document, 
-  Message, 
-  Notification, 
+import type {
+  Project,
+  Document,
+  Message,
+  Notification,
   RealtimeEvent,
-  User 
+  User
 } from '../types';
 
 // WebSocket Configuration
 const REALTIME_CONFIG = {
-  url: 'wss://flyflafbdqhdhgxngahz.supabase.co/realtime/v1/websocket',
-  apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZseWZsYWZiZHFoZGhneG5nYWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMzMzAsImV4cCI6MjA2ODgwOTMzMH0.pRpNyNwr6AQRg3eHA5XDgxJwhGZXwlakVx7in9ciOms',
+3  url: typeof window !== 'undefined' && window.location.hostname === 'portal.covrenfirm.com'
+    ? 'wss://portal.covrenfirm.com/ws'
+    : 'ws://localhost:8080/ws',
   heartbeatInterval: 30000,
   reconnectAttempts: 5,
   reconnectDelay: 1000,
@@ -22,14 +23,14 @@ const REALTIME_CONFIG = {
 // Event Types
 export type RealtimeChannel = 'projects' | 'documents' | 'messages' | 'notifications' | 'users';
 
-export interface RealtimeSubscription {
+interface RealtimeSubscription {
   channel: RealtimeChannel;
   event: 'INSERT' | 'UPDATE' | 'DELETE';
   filter?: string;
   callback: (payload: RealtimeEvent<any>) => void;
 }
 
-export interface ConnectionState {
+interface ConnectionState {
   isConnected: boolean;
   isConnecting: boolean;
   lastHeartbeat: number;
@@ -82,7 +83,7 @@ class RealtimeService {
 
     try {
       this.socket = new WebSocket(REALTIME_CONFIG.url);
-      
+
       this.socket.onopen = () => {
         this.connectionState.isConnected = true;
         this.connectionState.isConnecting = false;
@@ -126,20 +127,20 @@ class RealtimeService {
   private handleMessage(event: MessageEvent) {
     try {
       const data = JSON.parse(event.data);
-      
+
       switch (data.type) {
         case 'heartbeat':
           this.connectionState.lastHeartbeat = Date.now();
           break;
-        
+
         case 'subscription':
           this.handleSubscriptionEvent(data);
           break;
-        
+
         case 'error':
           console.error('Realtime error:', data.error);
           break;
-        
+
         default:
           console.log('Unknown realtime message type:', data.type);
       }
@@ -220,7 +221,7 @@ class RealtimeService {
 
     console.log('Attempting to reconnect...');
     const success = await this.connect();
-    
+
     if (success) {
       // Resubscribe to all channels
       this.resubscribeAll();
@@ -249,7 +250,7 @@ class RealtimeService {
     callback?: (payload: RealtimeEvent<T>) => void
   ): string {
     const subscriptionKey = `${channel}:${event}`;
-    
+
     if (callback) {
       this.subscriptions.set(subscriptionKey, {
         channel,
@@ -340,7 +341,7 @@ class RealtimeService {
     this.connectionState.isConnected = false;
     this.connectionState.isConnecting = false;
     this.stopHeartbeat();
-    
+
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
@@ -386,4 +387,4 @@ class RealtimeService {
 export const realtimeService = new RealtimeService();
 
 // Export types for external use
-export type { RealtimeSubscription, ConnectionState }; 
+export type { RealtimeSubscription, ConnectionState };

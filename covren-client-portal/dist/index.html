@@ -1,34 +1,17 @@
 <!DOCTYPE html>
-     <html lang="en">
-     <head>
-       <meta charset="UTF-8">
-       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-       <title>Covren Firm - Client Portal</title>
-       <link rel="stylesheet" href="https://unpkg.com/augmented-ui@2/augmented-ui.min.css">
-       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-       <link rel="stylesheet" href="styles.css">
-       <script src="https://unpkg.com/react@18/umd/react.production.min.js" defer
-         onload="console.log('React loaded, window.React=', typeof window.React !== 'undefined')"
-         onerror="console.error('React script failed to load')"></script>
-       <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" defer
-         onload="console.log('ReactDOM loaded, window.ReactDOM=', typeof window.ReactDOM !== 'undefined')"
-         onerror="console.error('ReactDOM script failed to load')"></script>
-       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js" defer
-         onload="console.log('Supabase loaded, window.supabase=', typeof window.supabase !== 'undefined')"
-         onerror="console.error('Supabase script failed, trying fallback');loadFallbackSupabase();"></script>
-       <script>
-         function loadFallbackSupabase() {
-           var fallbackScript = document.createElement('script');
-           fallbackScript.src = 'https://unpkg.com/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js';
-           fallbackScript.defer = true;
-           fallbackScript.onload = () => console.log('Fallback Supabase loaded, window.supabase=', typeof window.supabase !== 'undefined');
-           fallbackScript.onerror = () => console.error('All Supabase scripts failed to load');
-           document.head.appendChild(fallbackScript);
-         }
-       </script>
-     </head>
-     <body class="bg-gradient-to-br from-gray-900 to-black text-white font-inter">
-       <div id="root"></div>
-       <script src="index.js"></script>
-     </body>
-     </html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Covren Firm - Client Portal</title>
+  <link rel="stylesheet" href="https://unpkg.com/augmented-ui@2/augmented-ui.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-black text-white font-inter">
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>

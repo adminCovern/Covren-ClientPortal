@@ -11,11 +11,11 @@ interface DashboardProps {
   user: User;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
-  const [projects, setProjects] = useState<Project[]>([]);
+const Dashboard = ({ user }: DashboardProps) => {
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedView, setSelectedView] = useState<'overview' | 'projects' | 'analytics'>('overview');
+  const [error, setError] = useState(null);
+  const [selectedView, setSelectedView] = useState('overview');
   const [showProjectCreator, setShowProjectCreator] = useState(false);
 
   useEffect(() => {
@@ -25,14 +25,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const loadProjects = async () => {
     try {
       setLoading(true);
+      console.log('Dashboard: Starting loadProjects...');
       const response = await projectsApi.getUserProjects();
+      console.log('Dashboard: API response:', response);
+      console.log('Dashboard: Response success:', response.success);
+      console.log('Dashboard: Response data:', response.data);
+      console.log('Dashboard: Is data array?', Array.isArray(response.data));
       if (response.success && response.data) {
-        setProjects(response.data);
+        console.log('Dashboard: Setting projects to:', response.data);
+        setProjects(response.data || []);
       } else {
+        console.log('Dashboard: API failed, setting error:', response.error);
         setError(response.error || 'Failed to load projects');
       }
     } catch (error) {
-      console.error('Failed to load projects:', error);
+      console.error('Dashboard: Exception in loadProjects:', error);
       setError('Failed to load projects');
     } finally {
       setLoading(false);
@@ -315,4 +322,4 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;        

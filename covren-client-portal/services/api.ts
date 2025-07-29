@@ -24,8 +24,7 @@ import type {
 
 // API Configuration
 const API_CONFIG = {
-  baseUrl: 'https://flyflafbdqhdhgxngahz.supabase.co',
-  apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZseWZsYWZiZHFoZGhneG5nYWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMzMzAsImV4cCI6MjA2ODgwOTMzMH0.pRpNyNwr6AQRg3eHA5XDgxJwhGZXwlakVx7in9ciOms',
+  baseUrl: process.env.NODE_ENV === 'production' ? 'https://portal.covrenfirm.com/api' : 'http://localhost:8080/api',
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000,
@@ -44,20 +43,40 @@ class ApiError extends Error {
   }
 }
 
+let authToken: string | null = null;
+
+function setAuthToken(token: string | null) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('auth_token', token);
+  } else {
+    localStorage.removeItem('auth_token');
+  }
+}
+
+function getAuthToken(): string | null {
+  if (authToken) return authToken;
+  if (typeof window !== 'undefined') {
+    authToken = localStorage.getItem('auth_token');
+  }
+  return authToken;
+}
+
 // Request wrapper with retry logic
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
   retryCount = 0
 ): Promise<T> {
-  const url = `${API_CONFIG.baseUrl}/rest/v1/${endpoint}`;
+  const url = `${API_CONFIG.baseUrl}${endpoint}`;
   
+  const token = getAuthToken();
   const defaultOptions: RequestInit = {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'apikey': API_CONFIG.apiKey,
-      'Authorization': `Bearer ${API_CONFIG.apiKey}`,
-      'Prefer': 'return=representation',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers,
     },
     ...options,
   };
@@ -68,7 +87,7 @@ async function apiRequest<T>(
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new ApiError(
-        errorData.message || `HTTP ${response.status}`,
+        errorData.error || `HTTP ${response.status}`,
         response.status,
         errorData.code,
         errorData.details
@@ -78,10 +97,11 @@ async function apiRequest<T>(
     // Handle empty responses
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      return await response.json();
+      const data = await response.json();
+      return data.success ? data : { success: true, data };
     }
     
-    return {} as T;
+    return { success: true } as T;
   } catch (error) {
     if (retryCount < API_CONFIG.retryAttempts && error instanceof ApiError && error.status >= 500) {
       await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelay * (retryCount + 1)));
@@ -98,7 +118,7 @@ export const authApi = {
    */
   async signIn(credentials: LoginForm): Promise<ApiResponse<{ user: User; session: any }>> {
     try {
-      const response = await apiRequest<{ user: User; session: any }>('auth/v1/token?grant_type=password', {
+      const response = await apiRequest<{ success: boolean; data: { user: User; token: string } }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           email: credentials.email,
@@ -106,7 +126,19 @@ export const authApi = {
         }),
       });
       
-      return { data: response, error: null, success: true };
+      if (response.success && response.data) {
+        setAuthToken(response.data.token);
+        return { 
+          data: { 
+            user: response.data.user, 
+            session: { user: response.data.user, access_token: response.data.token } 
+          }, 
+          error: null, 
+          success: true 
+        };
+      }
+      
+      return { data: null, error: 'Authentication failed', success: false };
     } catch (error) {
       return { 
         data: null, 
@@ -121,20 +153,30 @@ export const authApi = {
    */
   async signUp(userData: RegisterForm): Promise<ApiResponse<{ user: User; session: any }>> {
     try {
-      const response = await apiRequest<{ user: User; session: any }>('auth/v1/signup', {
+      const response = await apiRequest<{ success: boolean; data: { user: User; token: string } }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
           email: userData.email,
           password: userData.password,
-          data: {
-            full_name: userData.full_name,
-            company: userData.company,
-            position: userData.position,
-          },
+          full_name: userData.full_name,
+          company: userData.company,
+          position: userData.position,
         }),
       });
       
-      return { data: response, error: null, success: true };
+      if (response.success && response.data) {
+        setAuthToken(response.data.token);
+        return { 
+          data: { 
+            user: response.data.user, 
+            session: { user: response.data.user, access_token: response.data.token } 
+          }, 
+          error: null, 
+          success: true 
+        };
+      }
+      
+      return { data: null, error: 'Registration failed', success: false };
     } catch (error) {
       return { 
         data: null, 
@@ -149,9 +191,11 @@ export const authApi = {
    */
   async signOut(): Promise<ApiResponse<void>> {
     try {
-      await apiRequest('auth/v1/logout', { method: 'POST' });
+      await apiRequest('/auth/logout', { method: 'POST' });
+      setAuthToken(null);
       return { data: null, error: null, success: true };
     } catch (error) {
+      setAuthToken(null);
       return { 
         data: null, 
         error: error instanceof Error ? error.message : 'Sign out failed', 
@@ -165,8 +209,18 @@ export const authApi = {
    */
   async getSession(): Promise<ApiResponse<any>> {
     try {
-      const response = await apiRequest<any>('auth/v1/user');
-      return { data: response, error: null, success: true };
+      const response = await apiRequest<{ success: boolean; data: { user: User } }>('/auth/me');
+      if (response.success && response.data) {
+        return { 
+          data: { 
+            user: response.data.user, 
+            session: { user: response.data.user, access_token: getAuthToken() } 
+          }, 
+          error: null, 
+          success: true 
+        };
+      }
+      return { data: null, error: 'Failed to get session', success: false };
     } catch (error) {
       return { 
         data: null, 
@@ -184,22 +238,30 @@ export const projectsApi = {
    */
   async getUserProjects(filters?: ProjectFilters): Promise<ApiResponse<Project[]>> {
     try {
-      let query = 'projects?select=*';
+      let query = '/projects';
+      const params = new URLSearchParams();
       
       if (filters) {
         if (filters.status?.length) {
-          query += `&status=in.(${filters.status.join(',')})`;
+          params.append('status', filters.status.join(','));
         }
         if (filters.priority?.length) {
-          query += `&priority=in.(${filters.priority.join(',')})`;
+          params.append('priority', filters.priority.join(','));
         }
         if (filters.search) {
-          query += `&name=ilike.*${filters.search}*`;
+          params.append('search', filters.search);
         }
       }
       
-      const response = await apiRequest<Project[]>(query);
-      return { data: response, error: null, success: true };
+      if (params.toString()) {
+        query += `?${params.toString()}`;
+      }
+      
+      const response = await apiRequest<{ success: boolean; data: { projects: Project[] } }>(query);
+      if (response.success && response.data) {
+        return { data: response.data.projects, error: null, success: true };
+      }
+      return { data: [], error: null, success: true };
     } catch (error) {
       return { 
         data: null, 
@@ -349,11 +411,11 @@ export const documentsApi = {
       const formData = new FormData();
       formData.append('file', uploadData.file);
       
-      const uploadResponse = await fetch(`${API_CONFIG.baseUrl}/storage/v1/object/documents/${filePath}`, {
+      const token = getAuthToken();
+      const uploadResponse = await fetch(`${API_CONFIG.baseUrl}/documents/upload`, {
         method: 'POST',
         headers: {
-          'apikey': API_CONFIG.apiKey,
-          'Authorization': `Bearer ${API_CONFIG.apiKey}`,
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: formData,
       });
@@ -712,4 +774,4 @@ export const realtimeApi = {
     console.log('Subscribing to notifications');
     return () => console.log('Unsubscribing from notifications');
   },
-}; 
+};                  

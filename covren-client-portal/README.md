@@ -1,7 +1,7 @@
 # Sovereign Command Center
 ## Covren Firm LLC - Production Grade Client Portal
 
-A comprehensive, real-time project management and collaboration platform built with React, TypeScript, and Supabase. This application provides secure, scalable project management with document sharing, real-time messaging, and team collaboration features.
+A comprehensive, real-time project management and collaboration platform built with React, TypeScript, and PostgreSQL. This application provides secure, scalable project management with document sharing, real-time messaging, and team collaboration features.
 
 ## 🚀 Features
 
@@ -86,10 +86,10 @@ A comprehensive, real-time project management and collaboration platform built w
 - **Babel**: Modern JavaScript compilation
 
 ### **Backend & Database**
-- **Supabase**: Backend-as-a-Service with PostgreSQL
-- **PostgreSQL**: Production-grade database with RLS
+- **PostgreSQL**: Production-grade database with direct connections
+- **JWT Authentication**: Secure token-based authentication
 - **Row-Level Security**: Database-level security policies
-- **Real-time Subscriptions**: WebSocket-based real-time updates
+- **Real-time Features**: WebSocket-based real-time updates
 
 ### **Development Tools**
 - **Jest**: Testing framework with React Testing Library
@@ -146,7 +146,7 @@ covren-client-portal/
 ### **Prerequisites**
 - Node.js 18+ (recommended: Node.js 20+)
 - npm or yarn package manager
-- Supabase account and project
+- PostgreSQL database server
 
 ### **Installation**
 
@@ -161,10 +161,10 @@ covren-client-portal/
    npm install
    ```
 
-3. **Set up Supabase**
-   - Create a new Supabase project
-   - Run the database schema: `database-schema.sql`
-   - Update API configuration in `services/api.ts`
+3. **Set up PostgreSQL Database**
+   - Create a PostgreSQL database
+   - Run the database schema: `database-schema-standalone.sql`
+   - Update database configuration in `api-backend.js`
 
 4. **Start development server**
    ```bash
@@ -178,11 +178,11 @@ covren-client-portal/
 
 ### **Environment Configuration**
 
-Create a `.env` file with your Supabase credentials:
+Create a `.env` file with your PostgreSQL credentials:
 
 ```env
-REACT_APP_SUPABASE_URL=your_supabase_url
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+DATABASE_URL=postgresql://username:password@localhost:5432/database_name
+JWT_SECRET=your_jwt_secret_key
 ```
 
 ## 🧪 Testing
@@ -248,8 +248,8 @@ npm run build
 ### **Environment Variables**
 ```env
 NODE_ENV=production
-REACT_APP_SUPABASE_URL=your_production_supabase_url
-REACT_APP_SUPABASE_ANON_KEY=your_production_supabase_key
+DATABASE_URL=postgresql://username:password@localhost:5432/database_name
+JWT_SECRET=your_production_jwt_secret
 ```
 
 ## 🤝 Contributing

@@ -1,63 +1,40 @@
 // Sovereign Command Center Main Entry Point
 // Covren Firm LLC - Production Grade Client Portal
 
-// Wait for Supabase and ReactDOM to load with retry limit and flexible detection
+// Wait for React and ReactDOM to load
 function waitForDependencies(maxRetries = 50) {
   return new Promise((resolve, reject) => {
     let retries = 0;
-    let supabaseInitialized = false;
     const checkDependencies = () => {
       const hasReact = typeof window.React !== 'undefined' && window.React !== null;
       const hasReactDOM = typeof window.ReactDOM !== 'undefined' && window.ReactDOM !== null && typeof window.ReactDOM.render === 'function';
-      const supabaseModule = window.supabase || window.Supabase;
-      let hasSupabase = false;
-      if (supabaseModule && typeof supabaseModule === 'object' && !supabaseInitialized) {
-        console.log('Supabase module debug:', supabaseModule);
-        if (typeof supabaseModule.createClient === 'function') {
-          hasSupabase = true;
-        } else if (typeof supabaseModule.auth === 'object' && typeof supabaseModule.from === 'function') {
-          hasSupabase = true;
-          supabaseInitialized = true; // Mark as initialized to prevent re-creation
-        }
-      } else if (supabaseInitialized) {
-        hasSupabase = true; // Use initialized state
-      }
-      const supabaseObj = supabaseModule;
-      console.log('Dependency check:', { hasReact, hasReactDOM, hasSupabase, supabaseObj });
-      if (hasReact && hasReactDOM && hasSupabase) {
+      
+      console.log('Dependency check:', { hasReact, hasReactDOM });
+      if (hasReact && hasReactDOM) {
         resolve();
       } else if (retries >= maxRetries) {
-        reject(new Error('Max retry attempts reached for dependency loading: ' + JSON.stringify({ hasReact, hasReactDOM, hasSupabase, supabaseObj })));
+        reject(new Error('Max retry attempts reached for dependency loading: ' + JSON.stringify({ hasReact, hasReactDOM })));
       } else {
         retries++;
-        console.log(`Dependencies not loaded yet. Retrying... (Attempt ${retries}/${maxRetries})`, { hasReact, hasReactDOM, hasSupabase });
-        setTimeout(checkDependencies, 300); // Increased delay for initialization
+        console.log(`Dependencies not loaded yet. Retrying... (Attempt ${retries}/${maxRetries})`, { hasReact, hasReactDOM });
+        setTimeout(checkDependencies, 300);
       }
     };
     checkDependencies();
   });
 }
 
-// Initialize once dependencies are loaded, creating client if needed
+// Initialize React app
 async function initializeApp() {
   try {
     await waitForDependencies();
-    let supabase = window.supabase || window.Supabase;
-    if (typeof supabase.createClient === 'function') {
-      // Factory detected; create client
-      supabase = supabase.createClient(
-        'https://flyflafbdqhdhgxngahz.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZseWZsYWZiZHFoZGhneG5nYWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMzMzAsImV4cCI6MjA2ODgwOTMzMH0.pRpNyNwr6AQRg3eHA5XDgxJwhGZXwlakVx7in9ciOms'
-      );
-      window.supabase = supabase; // Update global with the client
-    } else if (typeof supabase.auth === 'object' && typeof supabase.from === 'function') {
-      console.log('Using existing Supabase client');
-    } else {
-      throw new Error('Invalid Supabase object: ' + JSON.stringify(supabase));
-    }
-    return supabase;
+    
+    const { createElement } = window.React;
+    const { render } = window.ReactDOM;
+    
+    render(createElement(App), document.getElementById('root'));
   } catch (err) {
-    console.error('Dependency loading failed:', err);
+    console.error('App initialization failed:', err);
     throw err;
   }
 }
@@ -129,6 +106,504 @@ const ErrorToast = ({ message, onClose, type = 'error', duration = 5000 }) => {
   );
 };
 
+const Dashboard = ({ user }) => {
+  const [projects, setProjects] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+  const [selectedView, setSelectedView] = React.useState('overview');
+  const [showProjectCreator, setShowProjectCreator] = React.useState(false);
+
+  React.useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      setLoading(true);
+      console.log('Dashboard: Starting loadProjects...');
+      
+      if (window.projectsApi) {
+        const response = await window.projectsApi.getUserProjects();
+        console.log('Dashboard: API response:', response);
+        console.log('Dashboard: Response success:', response.success);
+        console.log('Dashboard: Response data:', response.data);
+        console.log('Dashboard: Is data array?', Array.isArray(response.data));
+        if (response.success && response.data) {
+          console.log('Dashboard: Setting projects to:', response.data);
+          const projectsArray = Array.isArray(response.data) ? response.data : (response.data.projects || []);
+          setProjects(projectsArray);
+        } else {
+          console.log('Dashboard: API failed, setting error:', response.error);
+          setError(response.error || 'Failed to load projects');
+        }
+      } else {
+        console.error('Dashboard: projectsApi not available on window');
+        setError('API not available');
+      }
+    } catch (error) {
+      console.error('Dashboard: Exception in loadProjects:', error);
+      setError('Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProjectCreated = (project) => {
+    setProjects(prev => [project, ...prev]);
+    setShowProjectCreator(false);
+  };
+
+  const handleCancelProjectCreation = () => {
+    setShowProjectCreator(false);
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const getProjectStats = () => {
+    const total = projects.length;
+    const active = projects.filter(p => p.status === 'active').length;
+    const completed = projects.filter(p => p.status === 'completed').length;
+    const critical = projects.filter(p => p.priority === 'critical').length;
+
+    return { total, active, completed, critical };
+  };
+
+  const stats = getProjectStats();
+
+  if (loading) {
+    return React.createElement('div', {
+      className: "min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white flex items-center justify-center"
+    }, React.createElement(LoadingSpinner, { size: 'lg' }));
+  }
+
+  return React.createElement('div', {
+    className: "min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white"
+  }, [
+    React.createElement('nav', {
+      key: 'nav',
+      className: "bg-gray-800 border-b border-gray-700 px-6 py-4"
+    }, React.createElement('div', {
+      className: "flex items-center justify-between"
+    }, [
+      React.createElement('div', {
+        key: 'nav-left',
+        className: "flex items-center"
+      }, React.createElement('div', {
+        className: "flex items-center space-x-3"
+      }, [
+        React.createElement('div', {
+          key: 'logo',
+          className: "w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center"
+        }, React.createElement('svg', {
+          className: "w-5 h-5 text-white",
+          fill: "none",
+          stroke: "currentColor",
+          viewBox: "0 0 24 24"
+        }, React.createElement('path', {
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          strokeWidth: 2,
+          d: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+        }))),
+        React.createElement('div', {
+          key: 'title'
+        }, [
+          React.createElement('h1', {
+            key: 'h1',
+            className: "text-xl font-bold text-white"
+          }, 'Sovereign Command Center™'),
+          React.createElement('p', {
+            key: 'p',
+            className: "text-xs text-gray-400"
+          }, 'Covren Firm LLC')
+        ])
+      ])),
+      React.createElement('div', {
+        key: 'nav-right',
+        className: "flex items-center space-x-4"
+      }, React.createElement('button', {
+        onClick: () => window.location.reload(),
+        className: "text-gray-300 hover:text-white transition-colors"
+      }, 'Sign Out'))
+    ])),
+    
+    React.createElement('div', {
+      key: 'content',
+      className: "p-6"
+    }, [
+      React.createElement('div', {
+        key: 'welcome',
+        className: "mb-8"
+      }, [
+        React.createElement('h1', {
+          key: 'greeting',
+          className: "text-3xl font-bold text-white mb-2"
+        }, `${getGreeting()}, ${user.full_name || user.email}`),
+        React.createElement('p', {
+          key: 'subtitle',
+          className: "text-gray-400"
+        }, 'Welcome to your Sovereign Command Center™ dashboard')
+      ]),
+
+      React.createElement('div', {
+        key: 'stats',
+        className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      }, [
+        React.createElement('div', {
+          key: 'total',
+          className: "bg-gray-800 rounded-lg p-6 border border-gray-700"
+        }, React.createElement('div', {
+          className: "flex items-center"
+        }, [
+          React.createElement('div', {
+            key: 'icon',
+            className: "p-2 bg-blue-600 rounded-lg"
+          }, React.createElement('svg', {
+            className: "w-6 h-6 text-white",
+            fill: "none",
+            stroke: "currentColor",
+            viewBox: "0 0 24 24"
+          }, React.createElement('path', {
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            strokeWidth: 2,
+            d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          }))),
+          React.createElement('div', {
+            key: 'text',
+            className: "ml-4"
+          }, [
+            React.createElement('p', {
+              key: 'label',
+              className: "text-sm font-medium text-gray-400"
+            }, 'Total Projects'),
+            React.createElement('p', {
+              key: 'value',
+              className: "text-2xl font-bold text-white"
+            }, stats.total.toString())
+          ])
+        ])),
+
+        React.createElement('div', {
+          key: 'active',
+          className: "bg-gray-800 rounded-lg p-6 border border-gray-700"
+        }, React.createElement('div', {
+          className: "flex items-center"
+        }, [
+          React.createElement('div', {
+            key: 'icon',
+            className: "p-2 bg-green-600 rounded-lg"
+          }, React.createElement('svg', {
+            className: "w-6 h-6 text-white",
+            fill: "none",
+            stroke: "currentColor",
+            viewBox: "0 0 24 24"
+          }, React.createElement('path', {
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            strokeWidth: 2,
+            d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          }))),
+          React.createElement('div', {
+            key: 'text',
+            className: "ml-4"
+          }, [
+            React.createElement('p', {
+              key: 'label',
+              className: "text-sm font-medium text-gray-400"
+            }, 'Active Projects'),
+            React.createElement('p', {
+              key: 'value',
+              className: "text-2xl font-bold text-white"
+            }, stats.active.toString())
+          ])
+        ])),
+
+        React.createElement('div', {
+          key: 'docs',
+          className: "bg-gray-800 rounded-lg p-6 border border-gray-700"
+        }, React.createElement('div', {
+          className: "flex items-center"
+        }, [
+          React.createElement('div', {
+            key: 'icon',
+            className: "p-2 bg-purple-600 rounded-lg"
+          }, React.createElement('svg', {
+            className: "w-6 h-6 text-white",
+            fill: "none",
+            stroke: "currentColor",
+            viewBox: "0 0 24 24"
+          }, React.createElement('path', {
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            strokeWidth: 2,
+            d: "M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          }))),
+          React.createElement('div', {
+            key: 'text',
+            className: "ml-4"
+          }, [
+            React.createElement('p', {
+              key: 'label',
+              className: "text-sm font-medium text-gray-400"
+            }, 'Documents'),
+            React.createElement('p', {
+              key: 'value',
+              className: "text-2xl font-bold text-white"
+            }, '0')
+          ])
+        ])),
+
+        React.createElement('div', {
+          key: 'critical',
+          className: "bg-gray-800 rounded-lg p-6 border border-gray-700"
+        }, React.createElement('div', {
+          className: "flex items-center"
+        }, [
+          React.createElement('div', {
+            key: 'icon',
+            className: "p-2 bg-red-600 rounded-lg"
+          }, React.createElement('svg', {
+            className: "w-6 h-6 text-white",
+            fill: "none",
+            stroke: "currentColor",
+            viewBox: "0 0 24 24"
+          }, React.createElement('path', {
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            strokeWidth: 2,
+            d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+          }))),
+          React.createElement('div', {
+            key: 'text',
+            className: "ml-4"
+          }, [
+            React.createElement('p', {
+              key: 'label',
+              className: "text-sm font-medium text-gray-400"
+            }, 'Critical'),
+            React.createElement('p', {
+              key: 'value',
+              className: "text-2xl font-bold text-white"
+            }, stats.critical.toString())
+          ])
+        ]))
+      ]),
+
+      React.createElement('div', {
+        key: 'activity',
+        className: "mt-8 bg-gray-800 rounded-lg border border-gray-700"
+      }, [
+        React.createElement('div', {
+          key: 'header',
+          className: "px-6 py-4 border-b border-gray-700"
+        }, React.createElement('h3', {
+          className: "text-lg font-medium text-white"
+        }, 'Recent Activity')),
+        React.createElement('div', {
+          key: 'content',
+          className: "p-6"
+        }, React.createElement('div', {
+          className: "text-center py-8"
+        }, React.createElement('p', {
+          className: "text-gray-400"
+        }, projects.length === 0 ? 'No recent activity. Create your first project to get started.' : `${projects.length} projects loaded successfully.`)))
+      ])
+    ])
+  ]);
+};
+
+window.Dashboard = Dashboard;
+
+const authApi = {
+  async signIn(credentials) {
+    try {
+      const response = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        localStorage.setItem('auth_token', data.data.token);
+        return { 
+          data: { 
+            user: data.data.user, 
+            session: { user: data.data.user, access_token: data.data.token } 
+          }, 
+          error: null, 
+          success: true 
+        };
+      }
+      
+      return { data: null, error: data.error || 'Authentication failed', success: false };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error.message || 'Authentication failed', 
+        success: false 
+      };
+    }
+  },
+
+  async signOut() {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await fetch('http://localhost:8080/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+      localStorage.removeItem('auth_token');
+      return { data: null, error: null, success: true };
+    } catch (error) {
+      localStorage.removeItem('auth_token');
+      return { 
+        data: null, 
+        error: error.message || 'Sign out failed', 
+        success: false 
+      };
+    }
+  },
+
+  async getSession() {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        return { data: null, error: 'No token found', success: false };
+      }
+
+      const response = await fetch('http://localhost:8080/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        return { 
+          data: { 
+            user: data.data.user, 
+            session: { user: data.data.user, access_token: token } 
+          }, 
+          error: null, 
+          success: true 
+        };
+      }
+      return { data: null, error: data.error || 'Failed to get session', success: false };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error.message || 'Failed to get session', 
+        success: false 
+      };
+    }
+  }
+};
+
+const projectsApi = {
+  async getUserProjects(filters) {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        return { data: [], error: 'No authentication token', success: false };
+      }
+
+      let query = '/projects';
+      const params = new URLSearchParams();
+      
+      if (filters) {
+        if (filters.status?.length) {
+          params.append('status', filters.status.join(','));
+        }
+        if (filters.priority?.length) {
+          params.append('priority', filters.priority.join(','));
+        }
+        if (filters.search) {
+          params.append('search', filters.search);
+        }
+      }
+      
+      if (params.toString()) {
+        query += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(`http://localhost:3000/api${query}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        return { data: data.data, error: null, success: true };
+      }
+      return { data: [], error: data.error || 'Failed to load projects', success: false };
+    } catch (error) {
+      return { 
+        data: [], 
+        error: error.message || 'Failed to load projects', 
+        success: false 
+      };
+    }
+  },
+
+  async createProject(projectData) {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        return { data: null, error: 'No authentication token', success: false };
+      }
+
+      const response = await fetch('http://localhost:3000/api/projects', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(projectData),
+      });
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        return { data: data.data, error: null, success: true };
+      }
+      return { data: null, error: data.error || 'Failed to create project', success: false };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error.message || 'Failed to create project', 
+        success: false 
+      };
+    }
+  }
+};
+
+window.authApi = authApi;
+window.projectsApi = projectsApi;
+
+console.log('API services loaded:', { 
+  authApi: !!window.authApi, 
+  projectsApi: !!window.projectsApi 
+});
+
 // Main App Component
 const App = () => {
   const [supabase, setSupabase] = React.useState(null);
@@ -145,25 +620,33 @@ const App = () => {
   const [position, setPosition] = React.useState('');
 
   React.useEffect(() => {
-    initializeApp().then((sb) => {
-      setSupabase(sb);
-      checkSession(sb);
-    }).catch((err) => {
-      console.error('App initialization failed:', err);
-      setError('Failed to initialize application');
-      setLoading(false);
-    });
+    checkSession();
   }, []);
 
-  const checkSession = async (sb) => {
+  const checkSession = async () => {
     try {
-      const { data: { session: currentSession } } = await sb.auth.getSession();
-      if (currentSession) {
-        setSession(currentSession);
-        setUser(currentSession.user);
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        const response = await fetch('http://localhost:8080/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setUser(result.data.user);
+            setSession({ user: result.data.user, access_token: token });
+          }
+        } else {
+          localStorage.removeItem('auth_token');
+        }
       }
     } catch (err) {
       console.error('Session check failed:', err);
+      localStorage.removeItem('auth_token');
     } finally {
       setLoading(false);
     }
@@ -179,14 +662,24 @@ const App = () => {
     try {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      
+      const response = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
       });
 
-      if (error) throw error;
-      setSession(data.session);
-      setUser(data.user);
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Login failed');
+      }
+
+      localStorage.setItem('auth_token', result.data.token);
+      setSession({ user: result.data.user, access_token: result.data.token });
+      setUser(result.data.user);
       setEmail('');
       setPassword('');
     } catch (err) {
@@ -212,21 +705,30 @@ const App = () => {
     try {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            company,
-            position,
-          },
+      
+      const response = await fetch('http://localhost:8080/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          full_name: fullName,
+          company,
+          position
+        })
       });
 
-      if (error) throw error;
-      setSession(data.session);
-      setUser(data.user);
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Registration failed');
+      }
+
+      localStorage.setItem('auth_token', result.data.token);
+      setSession({ user: result.data.user, access_token: result.data.token });
+      setUser(result.data.user);
       setEmail('');
       setPassword('');
       setConfirmPassword('');
@@ -243,12 +745,24 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await fetch('http://localhost:8080/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+      localStorage.removeItem('auth_token');
       setSession(null);
       setUser(null);
     } catch (err) {
       console.error('Logout error:', err);
-      setError('Logout failed');
+      localStorage.removeItem('auth_token');
+      setSession(null);
+      setUser(null);
     }
   };
 
@@ -480,118 +994,19 @@ const App = () => {
     );
   }
 
-  // Main application dashboard
+  // Main application dashboard - use the Dashboard component
+  if (window.Dashboard) {
+    return window.React.createElement(window.Dashboard, { user: user });
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
-      {/* Navigation */}
-      <nav className="bg-gray-800 border-b border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Sovereign Command Center™</h1>
-                <p className="text-xs text-gray-400">Covren Firm LLC</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={handleLogout}
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Welcome, {user.user_metadata?.full_name || user.email}
-          </h1>
-          <p className="text-gray-400">
-            Welcome to your Sovereign Command Center™ dashboard
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Total Projects</p>
-                <p className="text-2xl font-bold text-white">0</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-600 rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Active Projects</p>
-                <p className="text-2xl font-bold text-white">0</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-600 rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Documents</p>
-                <p className="text-2xl font-bold text-white">0</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-600 rounded-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Critical</p>
-                <p className="text-2xl font-bold text-white">0</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 bg-gray-800 rounded-lg border border-gray-700">
-          <div className="px-6 py-4 border-b border-gray-700">
-            <h3 className="text-lg font-medium text-white">Recent Activity</h3>
-          </div>
-          <div className="p-6">
-            <div className="text-center py-8">
-              <p className="text-gray-400">No recent activity. Create your first project to get started.</p>
-            </div>
-          </div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-400">Loading Dashboard...</p>
         </div>
       </div>
-
       {error && (
         <ErrorToast
           message={error}
@@ -601,6 +1016,10 @@ const App = () => {
     </div>
   );
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { default: App };
+}
 
 // Render the app once dependencies are loaded
 initializeApp().then(() => {
