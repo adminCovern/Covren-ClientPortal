@@ -24,8 +24,7 @@ import type {
 
 // API Configuration
 const API_CONFIG = {
-  baseUrl: 'https://flyflafbdqhdhgxngahz.supabase.co',
-  apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZseWZsYWZiZHFoZGhneG5nYWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMzMzAsImV4cCI6MjA2ODgwOTMzMH0.pRpNyNwr6AQRg3eHA5XDgxJwhGZXwlakVx7in9ciOms',
+  baseUrl: typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:3000' : '',
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000,
@@ -50,15 +49,15 @@ async function apiRequest<T>(
   options: RequestInit = {},
   retryCount = 0
 ): Promise<T> {
-  const url = `${API_CONFIG.baseUrl}/rest/v1/${endpoint}`;
+  const url = `${API_CONFIG.baseUrl}/api${endpoint}`;
   
+  const token = localStorage.getItem('auth_token');
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
-      'apikey': API_CONFIG.apiKey,
-      'Authorization': `Bearer ${API_CONFIG.apiKey}`,
-      'Prefer': 'return=representation',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
+    credentials: 'include',
     ...options,
   };
 
@@ -68,7 +67,7 @@ async function apiRequest<T>(
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new ApiError(
-        errorData.message || `HTTP ${response.status}`,
+        errorData.error || `HTTP ${response.status}`,
         response.status,
         errorData.code,
         errorData.details
@@ -96,9 +95,9 @@ export const authApi = {
   /**
    * Sign in user
    */
-  async signIn(credentials: LoginForm): Promise<ApiResponse<{ user: User; session: any }>> {
+  async signIn(credentials: LoginForm): Promise<ApiResponse<{ user: User; token: string }>> {
     try {
-      const response = await apiRequest<{ user: User; session: any }>('auth/v1/token?grant_type=password', {
+      const response = await apiRequest<{ user: User; token: string; success: boolean }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           email: credentials.email,
@@ -119,18 +118,16 @@ export const authApi = {
   /**
    * Sign up user
    */
-  async signUp(userData: RegisterForm): Promise<ApiResponse<{ user: User; session: any }>> {
+  async signUp(userData: RegisterForm): Promise<ApiResponse<{ user: User; token: string }>> {
     try {
-      const response = await apiRequest<{ user: User; session: any }>('auth/v1/signup', {
+      const response = await apiRequest<{ user: User; token: string; success: boolean }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
           email: userData.email,
           password: userData.password,
-          data: {
-            full_name: userData.full_name,
-            company: userData.company,
-            position: userData.position,
-          },
+          name: userData.full_name,
+          company: userData.company,
+          position: userData.position,
         }),
       });
       
@@ -149,7 +146,7 @@ export const authApi = {
    */
   async signOut(): Promise<ApiResponse<void>> {
     try {
-      await apiRequest('auth/v1/logout', { method: 'POST' });
+      await apiRequest('/auth/logout', { method: 'POST' });
       return { data: null, error: null, success: true };
     } catch (error) {
       return { 
@@ -163,10 +160,15 @@ export const authApi = {
   /**
    * Get current session
    */
-  async getSession(): Promise<ApiResponse<any>> {
+  async getSession(): Promise<ApiResponse<{ user: User; session: any }>> {
     try {
-      const response = await apiRequest<any>('auth/v1/user');
-      return { data: response, error: null, success: true };
+      const user = await apiRequest<User>('/auth/profile');
+      const token = localStorage.getItem('auth_token');
+      return { 
+        data: { user, session: { token } }, 
+        error: null, 
+        success: true 
+      };
     } catch (error) {
       return { 
         data: null, 
@@ -349,12 +351,13 @@ export const documentsApi = {
       const formData = new FormData();
       formData.append('file', uploadData.file);
       
-      const uploadResponse = await fetch(`${API_CONFIG.baseUrl}/storage/v1/object/documents/${filePath}`, {
+      const token = localStorage.getItem('auth_token');
+      const uploadResponse = await fetch(`${API_CONFIG.baseUrl}/api/upload`, {
         method: 'POST',
         headers: {
-          'apikey': API_CONFIG.apiKey,
-          'Authorization': `Bearer ${API_CONFIG.apiKey}`,
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include',
         body: formData,
       });
 
@@ -712,4 +715,4 @@ export const realtimeApi = {
     console.log('Subscribing to notifications');
     return () => console.log('Unsubscribing from notifications');
   },
-}; 
+};          
